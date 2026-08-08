@@ -203,3 +203,7 @@ curl -s -X POST http://localhost:3000/trades \
   -H "Content-Type: application/json" \
   -d "{\"watchId\":\"$WATCH_ID\"}"
 ```
+
+## Verify passport linking (watch create)
+
+See [passport/core.md](./passport/core.md). New watches should return a non-null `passportId` after listing.

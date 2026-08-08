@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../identity/entities/user.entity';
+import { Passport } from '../../passport/entities/passport.entity';
 import { WatchCondition } from '../enums/watch-condition.enum';
 import { WatchStatus } from '../enums/watch-status.enum';
 
@@ -49,6 +50,10 @@ export class Watch {
 
   @Column({ name: 'passport_id', type: 'uuid', nullable: true })
   passportId: string | null;
+
+  @ManyToOne(() => Passport, { nullable: true })
+  @JoinColumn({ name: 'passport_id' })
+  passport: Passport | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

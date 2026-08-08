@@ -8,6 +8,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
+import { PassportModule } from './passport/passport.module';
 import { TradingModule } from './trading/trading.module';
 import { WatchesModule } from './watches/watches.module';
 
@@ -20,6 +21,7 @@ import { WatchesModule } from './watches/watches.module';
     DatabaseModule,
     HealthModule,
     IdentityModule,
+    PassportModule,
     WatchesModule,
     TradingModule,
   ],
