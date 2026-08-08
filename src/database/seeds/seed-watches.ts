@@ -1,5 +1,6 @@
 import dataSource from '../data-source';
 import { User } from '../../identity/entities/user.entity';
+import { Passport } from '../../passport/entities/passport.entity';
 import { Watch } from '../../watches/entities/watch.entity';
 import { WatchCondition } from '../../watches/enums/watch-condition.enum';
 import { WatchStatus } from '../../watches/enums/watch-status.enum';
@@ -50,6 +51,7 @@ async function seedWatches() {
 
   const userRepository = dataSource.getRepository(User);
   const watchRepository = dataSource.getRepository(Watch);
+  const passportRepository = dataSource.getRepository(Passport);
 
   const seller = await userRepository.findOne({
     where: { email: 'seller@demo.com' },
@@ -70,12 +72,21 @@ async function seedWatches() {
     return;
   }
 
-  const watches = Array.from({ length: 100 }, (_, index) =>
-    watchRepository.create(buildWatch(index, seller.id)),
-  );
+  for (let index = 0; index < 100; index += 1) {
+    const watchData = buildWatch(index, seller.id);
+    const passport = await passportRepository.save(
+      passportRepository.create({ serialNumber: watchData.serialNumber! }),
+    );
 
-  await watchRepository.save(watches);
-  console.log('Seeded 100 luxury watches for seller@demo.com');
+    const watch = watchRepository.create({
+      ...watchData,
+      passportId: passport.id,
+    });
+
+    await watchRepository.save(watch);
+  }
+
+  console.log('Seeded 100 luxury watches with passports for seller@demo.com');
 
   await dataSource.destroy();
 }

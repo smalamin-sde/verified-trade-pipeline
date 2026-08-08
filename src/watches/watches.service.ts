@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { PassportService } from '../passport/passport.service';
 import { CreateWatchDto } from './dto/create-watch.dto';
 import { ListWatchesQueryDto } from './dto/list-watches-query.dto';
 import { Watch } from './entities/watch.entity';
@@ -11,22 +12,33 @@ export class WatchesService {
   constructor(
     @InjectRepository(Watch)
     private readonly watchesRepository: Repository<Watch>,
+    private readonly passportService: PassportService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async create(sellerId: string, dto: CreateWatchDto): Promise<Watch> {
-    const watch = this.watchesRepository.create({
-      referenceNumber: dto.referenceNumber,
-      serialNumber: dto.serialNumber,
-      brand: dto.brand,
-      model: dto.model,
-      askingPrice: dto.askingPrice.toFixed(2),
-      condition: dto.condition,
-      photos: dto.photos,
-      sellerId,
-      status: WatchStatus.LISTED,
-    });
+    return this.dataSource.transaction(async (manager) => {
+      const watch = manager.create(Watch, {
+        referenceNumber: dto.referenceNumber,
+        serialNumber: dto.serialNumber,
+        brand: dto.brand,
+        model: dto.model,
+        askingPrice: dto.askingPrice.toFixed(2),
+        condition: dto.condition,
+        photos: dto.photos,
+        sellerId,
+        status: WatchStatus.LISTED,
+      });
 
-    return this.watchesRepository.save(watch);
+      const savedWatch = await manager.save(watch);
+      const passport = await this.passportService.createForSerial(
+        dto.serialNumber,
+        manager,
+      );
+
+      savedWatch.passportId = passport.id;
+      return manager.save(savedWatch);
+    });
   }
 
   async findAll(query: ListWatchesQueryDto) {

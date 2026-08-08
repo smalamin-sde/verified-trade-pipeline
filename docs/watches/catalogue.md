@@ -10,7 +10,7 @@ Every trade starts with a **listed watch**. Sellers need to publish inventory; b
 | `GET /watches` | Public | Paginated catalogue with optional `status` filter |
 | `GET /watches/:id` | Public | Single watch detail |
 
-Passport linking is added in a later branch (`feat/passport-core`).
+Passport linking: each new listing creates a row in `passports` and sets `watches.passport_id`. See [passport/core.md](../passport/core.md).
 
 ## Verification checklist
 
