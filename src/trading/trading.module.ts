@@ -6,6 +6,7 @@ import { PassportModule } from '../passport/passport.module';
 import { Watch } from '../watches/entities/watch.entity';
 import { Trade } from './entities/trade.entity';
 import { TradeTransitionService } from './trade-transition.service';
+import { TradeQueryService } from './trade-query.service';
 import { TradesController } from './trades.controller';
 
 @Module({
@@ -16,7 +17,7 @@ import { TradesController } from './trades.controller';
     EscrowModule,
   ],
   controllers: [TradesController],
-  providers: [TradeTransitionService],
+  providers: [TradeTransitionService, TradeQueryService],
   exports: [TradeTransitionService, TypeOrmModule],
 })
 export class TradingModule {}
