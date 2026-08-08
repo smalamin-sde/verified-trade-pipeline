@@ -1,0 +1,5 @@
+export const COMMISSION_RATE = 0.07;
+
+export const ESCROW_FUNDING_DEADLINE_HOURS = 72;
+export const SHIPMENT_SLA_HOURS = 48;
+export const DISPUTE_WINDOW_HOURS = 72;
