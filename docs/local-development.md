@@ -207,3 +207,7 @@ curl -s -X POST http://localhost:3000/trades \
 ## Verify passport linking (watch create)
 
 See [passport/core.md](./passport/core.md). New watches should return a non-null `passportId` after listing.
+
+## Verify authentication verdict (PENDING_AUTH → AUTH_PASSED)
+
+See [authentication-verdict.md](./trading/authentication-verdict.md) for the full checklist.
