@@ -1,4 +1,4 @@
-import { Body, Controller, Headers, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Headers, Param, Post, Req } from '@nestjs/common';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
@@ -9,13 +9,24 @@ import { CreateTradeDto } from './dto/create-trade.dto';
 import { DisputeDto } from './dto/dispute.dto';
 import { MarkShippedDto } from './dto/mark-shipped.dto';
 import { TradeTransitionService } from './trade-transition.service';
+import { TradeQueryService } from './trade-query.service';
 
 @Controller('trades')
 export class TradesController {
   constructor(
     private readonly tradeTransitionService: TradeTransitionService,
     private readonly escrowService: EscrowService,
+    private readonly tradeQueryService: TradeQueryService,
   ) {}
+
+  @Roles(Role.BUYER, Role.SELLER)
+  @Get(':id')
+  getTrade(
+    @Req() req: { user: AuthenticatedUser },
+    @Param('id') id: string,
+  ) {
+    return this.tradeQueryService.getTradeProjection(id, req.user.userId);
+  }
 
   @Roles(Role.BUYER)
   @Post()

@@ -219,3 +219,7 @@ See [escrow-funding.md](./trading/escrow-funding.md) for the full checklist.
 ## Verify trade lifecycle (ship → deliver → release)
 
 See [lifecycle.md](./trading/lifecycle.md) for the full checklist.
+
+## Verify trade projections (GET /trades/:id)
+
+See [projections.md](./trading/projections.md) for the full checklist.
