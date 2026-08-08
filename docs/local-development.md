@@ -92,3 +92,54 @@ Copy `.env.example` to `.env` and adjust values if needed:
 cp .env.example .env
 ```
 
+
+## Verify guards (JWT + roles)
+
+See [authorization.md](./identity/authorization.md) for why guards exist.
+
+1. **Login and save the token**
+
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"seller@demo.com","password":"password123"}' | jq -r .accessToken)
+   ```
+
+2. **Protected route — any authenticated user**
+
+   ```bash
+   curl -s http://localhost:3000/auth/me \
+     -H "Authorization: Bearer $TOKEN"
+   ```
+
+   Expected: `{ "userId": "...", "email": "seller@demo.com", "roles": ["SELLER"] }`
+
+3. **Role-restricted route — seller only**
+
+   ```bash
+   curl -s http://localhost:3000/auth/seller-check \
+     -H "Authorization: Bearer $TOKEN"
+   ```
+
+   Expected: `{ "ok": true, "message": "Seller access granted" }`
+
+4. **Wrong role — buyer token on seller route**
+
+   ```bash
+   BUYER_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"buyer@demo.com","password":"password123"}' | jq -r .accessToken)
+
+   curl -s http://localhost:3000/auth/seller-check \
+     -H "Authorization: Bearer $BUYER_TOKEN"
+   ```
+
+   Expected: `403 Forbidden` with `"Insufficient role"`
+
+5. **No token**
+
+   ```bash
+   curl -s http://localhost:3000/auth/me
+   ```
+
+   Expected: `401 Unauthorized`
