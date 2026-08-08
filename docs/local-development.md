@@ -215,3 +215,7 @@ See [authentication-verdict.md](./trading/authentication-verdict.md) for the ful
 ## Verify escrow funding (AUTH_PASSED → ESCROW_FUNDED)
 
 See [escrow-funding.md](./trading/escrow-funding.md) for the full checklist.
+
+## Verify trade lifecycle (ship → deliver → release)
+
+See [lifecycle.md](./trading/lifecycle.md) for the full checklist.

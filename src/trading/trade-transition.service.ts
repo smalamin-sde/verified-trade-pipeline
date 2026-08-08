@@ -9,6 +9,7 @@ import { DataSource, Repository } from 'typeorm';
 import { AuthenticationReport } from '../authentication/entities/authentication-report.entity';
 import { AuthVerdict } from '../authentication/enums/auth-verdict.enum';
 import { AuthenticationVerdictDto } from '../authentication/dto/authentication-verdict.dto';
+import { EscrowService } from '../escrow/escrow.service';
 import { PassportService } from '../passport/passport.service';
 import { LedgerEntryType } from '../passport/enums/ledger-entry-type.enum';
 import { Watch } from '../watches/entities/watch.entity';
@@ -20,6 +21,8 @@ import { TradeState } from './enums/trade-state.enum';
 import { TradeTransitionError } from './domain/trade-transition.error';
 import { Trade } from './entities/trade.entity';
 import { TERMINAL_TRADE_STATES } from './domain/trade-state-machine';
+import { MarkShippedDto } from './dto/mark-shipped.dto';
+import { DisputeDto } from './dto/dispute.dto';
 
 @Injectable()
 export class TradeTransitionService {
@@ -31,6 +34,7 @@ export class TradeTransitionService {
     @InjectRepository(AuthenticationReport)
     private readonly authenticationReportsRepository: Repository<AuthenticationReport>,
     private readonly passportService: PassportService,
+    private readonly escrowService: EscrowService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -206,6 +210,152 @@ export class TradeTransitionService {
 
       return manager.save(trade);
     });
+  }
+
+  async markShipped(
+    tradeId: string,
+    sellerId: string,
+    dto: MarkShippedDto,
+  ): Promise<Trade> {
+    const trade = await this.loadTradeOrThrow(tradeId);
+
+    if (trade.sellerId !== sellerId) {
+      throw new ForbiddenException('Only the seller can mark the trade as shipped');
+    }
+
+    if (trade.state !== TradeState.ESCROW_FUNDED) {
+      throw new ConflictException(
+        `Trade must be in ESCROW_FUNDED to mark shipped (current: ${trade.state})`,
+      );
+    }
+
+    if (trade.shipmentSlaDeadline && new Date() > trade.shipmentSlaDeadline) {
+      throw new ConflictException('Shipment SLA deadline has passed');
+    }
+
+    this.applyTransitionOrThrow(trade, TradeAction.MARK_SHIPPED);
+    trade.trackingNumber = dto.trackingNumber;
+
+    return this.tradesRepository.save(trade);
+  }
+
+  async markDelivered(tradeId: string): Promise<Trade> {
+    const trade = await this.loadTradeOrThrow(tradeId);
+
+    if (trade.state !== TradeState.SHIPPED) {
+      throw new ConflictException(
+        `Trade must be in SHIPPED to mark delivered (current: ${trade.state})`,
+      );
+    }
+
+    this.applyTransitionOrThrow(trade, TradeAction.MARK_DELIVERED);
+
+    return this.tradesRepository.save(trade);
+  }
+
+  async release(tradeId: string, buyerId: string): Promise<Trade> {
+    const trade = await this.loadTradeOrThrow(tradeId);
+    const watch = await this.loadWatchOrThrow(trade.watchId);
+
+    if (trade.buyerId !== buyerId) {
+      throw new ForbiddenException('Only the buyer can release funds to the seller');
+    }
+
+    if (
+      trade.state !== TradeState.DELIVERED &&
+      trade.state !== TradeState.DISPUTED
+    ) {
+      throw new ConflictException(
+        `Trade must be in DELIVERED or DISPUTED to release (current: ${trade.state})`,
+      );
+    }
+
+    if (trade.state === TradeState.DELIVERED) {
+      if (trade.disputeWindowEnds && new Date() > trade.disputeWindowEnds) {
+        throw new ConflictException('Dispute window has closed');
+      }
+    }
+
+    if (!watch.passportId) {
+      throw new ConflictException('Watch has no linked passport for ledger update');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      this.applyTransitionOrThrow(trade, TradeAction.RELEASE);
+
+      await this.escrowService.releaseToSeller(tradeId, manager);
+
+      await this.passportService.appendEntry(
+        watch.passportId as string,
+        {
+          type: LedgerEntryType.TRANSFERRED,
+          payload: {
+            tradeId,
+            buyerId: trade.buyerId,
+            sellerId: trade.sellerId,
+            netPayout: trade.netPayout,
+          },
+          signer: buyerId,
+        },
+        manager,
+      );
+
+      return manager.save(trade);
+    });
+  }
+
+  async dispute(tradeId: string, buyerId: string, dto: DisputeDto): Promise<Trade> {
+    const trade = await this.loadTradeOrThrow(tradeId);
+
+    if (trade.buyerId !== buyerId) {
+      throw new ForbiddenException('Only the buyer can dispute a trade');
+    }
+
+    if (trade.state !== TradeState.DELIVERED) {
+      throw new ConflictException(
+        `Trade must be in DELIVERED to dispute (current: ${trade.state})`,
+      );
+    }
+
+    if (trade.disputeWindowEnds && new Date() > trade.disputeWindowEnds) {
+      throw new ConflictException('Dispute window has closed');
+    }
+
+    this.applyTransitionOrThrow(trade, TradeAction.DISPUTE);
+    trade.disputeReason = dto.disputeReason;
+
+    return this.tradesRepository.save(trade);
+  }
+
+  private async loadTradeOrThrow(tradeId: string): Promise<Trade> {
+    const trade = await this.tradesRepository.findOne({ where: { id: tradeId } });
+
+    if (!trade) {
+      throw new NotFoundException(`Trade ${tradeId} not found`);
+    }
+
+    return trade;
+  }
+
+  private async loadWatchOrThrow(watchId: string): Promise<Watch> {
+    const watch = await this.watchesRepository.findOne({ where: { id: watchId } });
+
+    if (!watch) {
+      throw new NotFoundException(`Watch ${watchId} not found`);
+    }
+
+    return watch;
+  }
+
+  private applyTransitionOrThrow(trade: Trade, action: TradeAction): void {
+    try {
+      applyTransition(trade, action);
+    } catch (error) {
+      if (error instanceof TradeTransitionError) {
+        throw new ConflictException(error.message);
+      }
+      throw error;
+    }
   }
 }
 

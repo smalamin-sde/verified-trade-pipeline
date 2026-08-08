@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { applyTransition } from '../trading/domain/trade-state-machine';
 import { TradeTransitionError } from '../trading/domain/trade-transition.error';
 import { Trade } from '../trading/entities/trade.entity';
@@ -121,5 +121,26 @@ export class EscrowService {
 
       return savedTrade;
     });
+  }
+
+  async releaseToSeller(tradeId: string, manager?: EntityManager): Promise<EscrowHold> {
+    const repo = manager
+      ? manager.getRepository(EscrowHold)
+      : this.escrowHoldsRepository;
+
+    const hold = await repo.findOne({ where: { tradeId } });
+
+    if (!hold) {
+      throw new NotFoundException(`Escrow hold for trade ${tradeId} not found`);
+    }
+
+    if (hold.status !== EscrowHoldStatus.HELD) {
+      throw new ConflictException(
+        `Escrow hold is not in HELD status (current: ${hold.status})`,
+      );
+    }
+
+    hold.status = EscrowHoldStatus.RELEASED;
+    return repo.save(hold);
   }
 }
