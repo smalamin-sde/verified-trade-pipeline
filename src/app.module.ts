@@ -8,6 +8,7 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { DatabaseModule } from './database/database.module';
 import { HealthModule } from './health/health.module';
 import { IdentityModule } from './identity/identity.module';
+import { WatchesModule } from './watches/watches.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { IdentityModule } from './identity/identity.module';
     DatabaseModule,
     HealthModule,
     IdentityModule,
+    WatchesModule,
   ],
   controllers: [AppController],
   providers: [

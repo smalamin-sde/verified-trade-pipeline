@@ -143,3 +143,46 @@ See [authorization.md](./identity/authorization.md) for why guards exist.
    ```
 
    Expected: `401 Unauthorized`
+
+## Verify watches catalogue
+
+See [catalogue.md](./watches/catalogue.md) for the full checklist.
+
+1. **Seed 100 luxury watches (optional, dev only)**
+
+   ```bash
+   npm run seed:watches
+   ```
+
+2. **Public paginated catalogue**
+
+   ```bash
+   curl -s "http://localhost:3000/watches?page=1&limit=10"
+   ```
+
+3. **Watch detail** (replace `:id` with an id from step 2)
+
+   ```bash
+   curl -s http://localhost:3000/watches/:id
+   ```
+
+4. **Create listing (seller only)**
+
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"email":"seller@demo.com","password":"password123"}' | jq -r .accessToken)
+
+   curl -s -X POST http://localhost:3000/watches \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "referenceNumber": "ROLEX-SUB-001",
+       "serialNumber": "SN-ROLEX-SUB-001",
+       "brand": "Rolex",
+       "model": "Submariner Date",
+       "askingPrice": 14500,
+       "condition": "EXCELLENT",
+       "photos": ["https://images.example.com/rolex-sub-1.jpg"]
+     }'
+   ```
