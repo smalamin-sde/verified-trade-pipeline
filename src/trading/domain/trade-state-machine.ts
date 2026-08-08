@@ -105,3 +105,17 @@ export function applyTransition(trade: Trade, action: TradeAction): Trade {
 function addHours(date: Date, hours: number): Date {
   return new Date(date.getTime() + hours * 60 * 60 * 1000);
 }
+
+export const TERMINAL_TRADE_STATES: TradeState[] = [
+  TradeState.AUTH_FAILED,
+  TradeState.RELEASED,
+  TradeState.REFUNDED_PRE_SHIP,
+  TradeState.REFUNDED_POST_DELIVERY,
+  TradeState.EXPIRED,
+  TradeState.CANCELLED,
+  TradeState.LOST_IN_TRANSIT,
+];
+
+export function isActiveTradeState(state: TradeState): boolean {
+  return !isTerminalState(state);
+}
