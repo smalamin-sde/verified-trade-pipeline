@@ -208,6 +208,10 @@ curl -s -X POST http://localhost:3000/trades \
 
 See [passport/core.md](./passport/core.md). New watches should return a non-null `passportId` after listing.
 
+## Verify passport public API
+
+See [public-api.md](./passport/public-api.md) for the full checklist.
+
 ## Verify authentication verdict (PENDING_AUTH → AUTH_PASSED)
 
 See [authentication-verdict.md](./trading/authentication-verdict.md) for the full checklist.

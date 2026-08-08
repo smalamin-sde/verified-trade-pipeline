@@ -10,6 +10,10 @@ import {
 import { LedgerEntry } from './entities/ledger-entry.entity';
 import { Passport } from './entities/passport.entity';
 import { LedgerEntryType } from './enums/ledger-entry-type.enum';
+import {
+  PublicLedgerEntryView,
+  PublicPassportView,
+} from './dto/public-passport-view.interface';
 
 export interface AppendLedgerEntryInput {
   type: LedgerEntryType;
@@ -56,6 +60,23 @@ export class PassportService {
   async verifyPassportChain(passportId: string): Promise<boolean> {
     const entries = await this.getEntriesOrdered(passportId);
     return verifyChain(entries as StoredLedgerEntry[], this.signingKey);
+  }
+
+  async getPublicViewBySerial(serialNumber: string): Promise<PublicPassportView> {
+    const passport = await this.findBySerial(serialNumber);
+
+    if (!passport) {
+      throw new NotFoundException(`Passport for serial ${serialNumber} not found`);
+    }
+
+    const entries = await this.getEntriesOrdered(passport.id);
+    const verified = verifyChain(entries as StoredLedgerEntry[], this.signingKey);
+
+    return {
+      serialNumber: passport.serialNumber,
+      verified,
+      entries: entries.map(toPublicEntryView),
+    };
   }
 
   async appendEntry(
@@ -112,4 +133,15 @@ export class PassportService {
       ? manager.getRepository(LedgerEntry)
       : this.ledgerEntriesRepository;
   }
+}
+
+function toPublicEntryView(entry: LedgerEntry): PublicLedgerEntryView {
+  return {
+    type: entry.type,
+    payload: entry.payload,
+    prevHash: entry.prevHash,
+    thisHash: entry.thisHash,
+    signer: entry.signer,
+    createdAt: entry.createdAt.toISOString(),
+  };
 }
