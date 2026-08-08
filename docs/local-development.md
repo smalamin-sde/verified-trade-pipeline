@@ -186,3 +186,20 @@ See [catalogue.md](./watches/catalogue.md) for the full checklist.
        "photos": ["https://images.example.com/rolex-sub-1.jpg"]
      }'
    ```
+
+## Verify trade initiation (DRAFT → PENDING_AUTH)
+
+See [initiate.md](./trading/initiate.md) for the full checklist.
+
+```bash
+BUYER_TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"buyer@demo.com","password":"password123"}' | jq -r .accessToken)
+
+WATCH_ID=$(curl -s "http://localhost:3000/watches?page=1&limit=1" | jq -r .data[0].id)
+
+curl -s -X POST http://localhost:3000/trades \
+  -H "Authorization: Bearer $BUYER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{\"watchId\":\"$WATCH_ID\"}"
+```
