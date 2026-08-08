@@ -211,3 +211,7 @@ See [passport/core.md](./passport/core.md). New watches should return a non-null
 ## Verify authentication verdict (PENDING_AUTH → AUTH_PASSED)
 
 See [authentication-verdict.md](./trading/authentication-verdict.md) for the full checklist.
+
+## Verify escrow funding (AUTH_PASSED → ESCROW_FUNDED)
+
+See [escrow-funding.md](./trading/escrow-funding.md) for the full checklist.
