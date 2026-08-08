@@ -25,6 +25,52 @@ After authentication passes (`AUTH_PASSED`), the buyer must **fund escrow** befo
 - Sets `shipmentSlaDeadline` on the trade
 - Stores idempotency record for safe retries
 
+## Buyer fund-escrow flow
+
+```
+1. Buyer calls POST /trades/:id/fund-escrow
+   Header: Idempotency-Key: fund-001
+
+2. System checks idempotency_records first
+   → Key "fund-001" exists?  → Return saved response (STOP)
+   → Key not found?          → Continue below
+
+3. In ONE transaction (all or nothing):
+   a) trades.state → ESCROW_FUNDED
+   b) escrow_holds → new row (money held)
+   c) idempotency_records → new row (remember fund-001)
+```
+
+### Which table is first?
+
+| Situation | First table touched |
+|-----------|---------------------|
+| **First request** | `escrow_holds` first, then `idempotency_records` (same transaction) |
+| **Retry (same key)** | Only `idempotency_records` is read — nothing new is written |
+
+### Relation between the two tables
+
+**No direct FK** between them. Both link to the **same trade**:
+
+```
+trades (id)
+   ├── escrow_holds.trade_id         → "money held for this trade"
+   └── idempotency_records.trade_id  → "this payment request was processed"
+```
+
+| Table | Role |
+|-------|------|
+| **`escrow_holds`** | Business: buyer's money is locked |
+| **`idempotency_records`** | Technical: prevent paying twice on retry |
+
+**Example after one successful fund:**
+
+| escrow_holds | idempotency_records |
+|--------------|---------------------|
+| trade `abc`, amount `$12,000`, status `HELD` | key `fund-001`, trade `abc`, saved response |
+
+Same trade, different jobs — one holds money, one remembers the request.
+
 ## Verification checklist
 
 - [ ] Trade in `AUTH_PASSED` (complete auth verdict flow first)
